@@ -1,68 +1,88 @@
 import os
-from flask import Flask, request
-from dotenv import load_dotenv
-from flask_cors import CORS
-import google.generativeai as genai
-from youtube_transcript_api import YouTubeTranscriptApi
 
-load_dotenv()
+from flask import Flask,jsonify
+from flask_smorest import Api
+from flask_jwt_extended import JWTManager
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
+from db import db
 
-prompt="""You are Yotube video summarizer. You will be taking the transcript text
-and summarizing the entire video and providing the important summary in points
-within 500 words. Please provide the summary of the text given here: """
+import models
 
+from blocklist import BLOCKLIST
 
-def extract_transcript_details(youtube_video_url):
-    try:
-        video_id = youtube_video_url.split("=")[1]
-        transcript_text = YouTubeTranscriptApi.get_transcript(video_id)
-        transcript = ""
-        for i in transcript_text:
-            transcript += " " + i["text"]
+from resources.summary import blp as SummaryBlueprint
+from resources.user import blp as UserBlueprint
 
-        return transcript.strip()  
-    except Exception as e:
-        print(f"Error extracting transcript: {e}")
-        return "" 
+def create_app(db_url=None):
+    app = Flask(__name__)
+    app.config["PROPAGATE_EXCEPTIONS"] = True
+    app.config["API_TITLE"] = "VidBite REST API"
+    app.config["API_VERSION"] = "v1"
+    app.config["OPENAPI_VERSION"] = "3.0.3"
+    app.config["JWT_SECRET_KEY"] = "jose"
 
-def generate_summary(transcript_text, prompt):
-    model = genai.GenerativeModel("gemini-pro")
-    response = model.generate_content(prompt + transcript_text)
+    jwt = JWTManager(app)
     
-    if hasattr(response, 'parts') and response.parts:
-        return response.parts[0].text 
-    else:
-        print("No valid response part returned.")
-        return "Unable to generate summary due to content restrictions."
+    @jwt.token_in_blocklist_loader
+    def check_if_token_in_blocklist(jwt_header, jwt_payload):
+        return jwt_payload["jti"] in BLOCKLIST
 
-def get_summary(youtube_video_url):
-    transcript_text = extract_transcript_details(youtube_video_url)
-    if transcript_text:  
-        summary = generate_summary(transcript_text, prompt)
-        return summary
-    else:
-        return "No transcript available."
 
-app = Flask(__name__)
+    @jwt.revoked_token_loader
+    def revoked_token_callback(jwt_header, jwt_payload):
+        return (
+            jsonify(
+                {"description": "The token has been revoked.", "error": "token_revoked"}
+            ),
+            401,
+        )
+    @jwt.expired_token_loader
+    def expired_token_callback(jwt_header, jwt_payload):
+        return (
+            jsonify({"message": "The token has expired.", "error": "token_expired"}),
+            401,
+        )
 
-CORS(app)
+    @jwt.invalid_token_loader
+    def invalid_token_callback(error):
+        return (
+            jsonify(
+                {"message": "Signature verification failed.", "error": "invalid_token"}
+            ),
+            401,
+        )
 
-@app.route("/health")
-def check_health():
-    return "OK", 200
+    @jwt.unauthorized_loader
+    def missing_token_callback(error):
+        return (
+            jsonify(
+                {
+                    "description": "Request does not contain an access token.",
+                    "error": "authorization_required",
+                }
+            ),
+            401,
+        )
+    @jwt.additional_claims_loader
+    def add_claims_to_jwt(identity):
+        if identity == 1:
+            return {"is_admin": True}
+        return {"is_admin": False}
 
-@app.route("/summarize", methods=["POST"])
-def summarize():
-    try:
-        youtube_video_url = request.json.get("url")
-        summary = get_summary(youtube_video_url)
-        print(summary)
-        return {"summary": summary}, 200
-    except Exception as e:
-        print(f"Error generating summary: {e}")
-        return {"error": str(e)}, 500
+    app.config["OPENAPI_URL_PREFIX"] = "/"
+    app.config["OPENAPI_SWAGGER_UI_PATH"] = "/swagger-ui"
+    app.config[
+        "OPENAPI_SWAGGER_UI_URL"
+    ] = "https://cdn.jsdelivr.net/npm/swagger-ui-dist/"
+    app.config["SQLALCHEMY_DATABASE_URI"] = db_url or os.getenv("DATABASE_URL", "sqlite:///data.db")
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    db.init_app(app)
+    api = Api(app)
 
-if __name__=="__main__":
-    app.run(host="0.0.0.0", port=5013,debug=True)
+    with app.app_context():
+        db.create_all()
+
+    api.register_blueprint(UserBlueprint)
+    api.register_blueprint(SummaryBlueprint)
+
+    return app

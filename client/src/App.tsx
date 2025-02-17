@@ -1,26 +1,17 @@
-import { ColorModeProvider, ColorModeScript } from "@kobalte/core";
-import { MetaProvider } from "@solidjs/meta";
-import { Suspense } from "solid-js";
-import { Router } from "@solidjs/router";
-import Summary from "./pages/Summary";
+import { Profile, Summary, Register, Login, Home, NotFoundPage } from "./pages"
+import { Routes, Route } from "react-router";
 
-const route = {
-  path: "/",
-  component: Summary
-}
+function App() {
 
-const App = () => {
   return (
-    <MetaProvider>
-      <Suspense>
-        <ColorModeScript />
-        <ColorModeProvider>
-          <Router>
-            {route}
-          </Router>
-        </ColorModeProvider>
-      </Suspense>
-    </MetaProvider>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/summary" element={<Summary />} />
+      <Route path="/profile" element={<Profile />} />
+      <Route path="/register" element={<Register />} />
+      <Route path="/login" element={<Login />} />
+      <Route path="*" element={<NotFoundPage />} />
+    </Routes>
   )
 }
 

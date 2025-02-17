@@ -1,19 +1,40 @@
-import {defineConfig} from 'vite'
-import {dirname} from "path";
-import {fileURLToPath} from "url";
-import solid from 'vite-plugin-solid'
+import { defineConfig } from 'vite'
+import path from "path"
+import react from '@vitejs/plugin-react'
+import tailwindcss from '@tailwindcss/vite'
+import { ViteImageOptimizer } from 'vite-plugin-image-optimizer';
 
-import path from "path";
+const ReactCompilerConfig = {
+  target: '19'
+};
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
-
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [solid()],
+  plugins: [
+    react({
+      babel: {
+        plugins: [
+          ["babel-plugin-react-compiler", ReactCompilerConfig],
+        ],
+      },
+    }),
+    tailwindcss(),
+    ViteImageOptimizer({
+      png: { quality: 80 },
+      jpeg: { quality: 75 },
+      webp: { quality: 80 },
+      avif: { quality: 70 },
+      svg: {
+        plugins: [
+          { name: 'removeViewBox' },
+          { name: 'sortAttrs' },
+        ],
+      },
+    })
+  ],
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./src")
-    }
-  }
+      "@": path.resolve(__dirname, "./src"),
+    },
+  },
 })
-
