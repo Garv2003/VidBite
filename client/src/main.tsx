@@ -5,6 +5,7 @@ import App from './App.tsx'
 
 import { ThemeProvider } from '@/context/ThemeProvider.tsx'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Toaster } from "@/components/ui/sonner"
 
 import { BrowserRouter } from "react-router";
 
@@ -18,6 +19,7 @@ createRoot(document.getElementById('root')!).render(
       <BrowserRouter>
         <QueryClientProvider client={queryClient}>
           <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+            <Toaster />
             <App />
           </ThemeProvider>
         </QueryClientProvider>

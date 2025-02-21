@@ -3,10 +3,9 @@ import os
 from flask import Flask,jsonify
 from flask_smorest import Api
 from flask_jwt_extended import JWTManager
+from flask_cors import CORS
 
 from db import db
-
-import models
 
 from blocklist import BLOCKLIST
 
@@ -20,6 +19,8 @@ def create_app(db_url=None):
     app.config["API_VERSION"] = "v1"
     app.config["OPENAPI_VERSION"] = "3.0.3"
     app.config["JWT_SECRET_KEY"] = "jose"
+
+    CORS(app, resources={r"/*": {"origins": "*"}})
 
     jwt = JWTManager(app)
     
@@ -86,3 +87,8 @@ def create_app(db_url=None):
     api.register_blueprint(SummaryBlueprint)
 
     return app
+
+
+if __name__ == "__main__":
+    app = create_app()
+    app.run()

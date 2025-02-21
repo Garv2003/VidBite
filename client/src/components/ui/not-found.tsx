@@ -1,6 +1,5 @@
-import { ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Link, useNavigate } from "react-router"
+import { Link } from "react-router"
 // import { Input } from "@/components/ui/input"
 
 interface NotFoundProps {
@@ -24,12 +23,6 @@ export function NotFound({
 }: NotFoundProps) {
     // description = "Lost, this page is. In another system, it may be.",
 
-    const navigate = useNavigate()
-
-    const handleGoBack = () => {
-        navigate(-1);
-    };
-
     return (
         <div className="relative text-center z-[1] pt-52">
             <h1 className="mt-4 text-balance text-5xl font-semibold tracking-tight text-primary sm:text-7xl">
@@ -46,15 +39,6 @@ export function NotFound({
                 <Button variant="outline">Search</Button>
             </div> */}
             <div className="mt-10 flex flex-col sm:flex-row sm:items-center sm:justify-center gap-y-3 gap-x-6">
-                <Button variant="secondary" className="group" onClick={handleGoBack}>
-                    <ArrowLeft
-                        className="me-2 ms-0 opacity-60 transition-transform group-hover:-translate-x-0.5"
-                        size={16}
-                        strokeWidth={2}
-                        aria-hidden="true"
-                    />
-                    <span> Go back</span>
-                </Button>
                 <Button className="-order-1 sm:order-none" asChild>
                     <Link to="/">Take me home</Link>
                 </Button>

@@ -4,8 +4,12 @@ python-dotenv
 pathlib
 flask
 flask-smorest
-flask-cors
+flask_cors
 uuid
 marshmallow
 flask-sqlalchemy
 sqlalchemy
+flask_jwt_extended
+passlib
+gunicorn
+pytube

@@ -5,20 +5,22 @@ from flask_jwt_extended import (
     create_access_token,
     get_jwt,
     jwt_required,
+    get_jwt_identity
 )
+from flask import jsonify
 from db import db
 from models import UserModel
-from schemas import UserSchema
+from schemas import UserSchema,LoginUserSchema
 from blocklist import BLOCKLIST
 
 
 blp = Blueprint("Users", "users", description="Operations on users")
 
-
 @blp.route("/register")
 class UserRegister(MethodView):
     @blp.arguments(UserSchema)
     def post(self, user_data):
+        print(user_data)
         if UserModel.query.filter(UserModel.email == user_data["email"]).first():
             abort(409, message="A user with that email already exists.")
 
@@ -32,13 +34,27 @@ class UserRegister(MethodView):
 
         return {"message": "Registration successful."}, 201
 
-@blp.route("/user/<int:user_id>")
+@blp.route("/user")
 class User(MethodView):
     @jwt_required()
-    @blp.response(200, UserSchema)
-    def get(self, user_id):
+    @blp.response(200, UserSchema(exclude=("password",)))
+    def get(self):
+        user_id = get_jwt_identity() 
         user = UserModel.query.get_or_404(user_id)
-        return user
+        if not user:
+            abort(404, message="User not found.")
+        return jsonify({
+            "data":{
+                "id": user.id,  
+                "name": user.name,
+                "email": user.email,
+                "stats": {
+                    "savedSummaries": user.saved_summaries,
+                    "totalVideosProcessed": user.total_videos_processed,
+                }
+            },
+            "message":"User retrieved."
+        }) 
 
     @jwt_required()
     def delete(self, user_id):
@@ -49,7 +65,7 @@ class User(MethodView):
 
 @blp.route("/login")
 class UserLogin(MethodView):
-    @blp.arguments(UserSchema)
+    @blp.arguments(LoginUserSchema)
     def post(self, user_data):
         user = UserModel.query.filter(
             UserModel.email == user_data["email"]
